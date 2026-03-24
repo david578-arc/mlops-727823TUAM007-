@@ -1,0 +1,2 @@
+f1_score,accuracy,precision,recall,training_time_seconds,random_seed,model_size_mb
+1.0,1.0,1.0,1.0,0.4934,42,0.0693

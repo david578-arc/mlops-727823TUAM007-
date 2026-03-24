@@ -1,0 +1,58 @@
+$schema: https://azuremlschemas.azureedge.net/latest/pipelineJob.schema.json
+type: pipeline
+
+experiment_name: SKCT_727823TUAM007_EEGSeizure
+description: EEG Seizure Detection MLOps Pipeline - Roll No 727823TUAM007
+
+settings:
+  default_compute: azureml:cpu-cluster
+
+inputs:
+  n_estimators: 100
+  max_depth: 10
+  seed: 42
+
+jobs:
+  data_prep:
+    type: command
+    code: .
+    command: >-
+      python data_prep.py
+      --output_dir ${{outputs.processed_data}}
+    environment: azureml:AzureML-sklearn-1.0-ubuntu20.04-py38-cpu@latest
+    outputs:
+      processed_data:
+        type: uri_folder
+
+  train_pipeline:
+    type: command
+    code: .
+    command: >-
+      python train_pipeline.py
+      --input_dir ${{inputs.processed_data}}
+      --output_dir ${{outputs.model_output}}
+      --n_estimators ${{parent.inputs.n_estimators}}
+      --max_depth ${{parent.inputs.max_depth}}
+      --seed ${{parent.inputs.seed}}
+    environment: azureml:AzureML-sklearn-1.0-ubuntu20.04-py38-cpu@latest
+    inputs:
+      processed_data: ${{parent.jobs.data_prep.outputs.processed_data}}
+    outputs:
+      model_output:
+        type: uri_folder
+
+  evaluate:
+    type: command
+    code: .
+    command: >-
+      python evaluate.py
+      --data_dir ${{inputs.processed_data}}
+      --model_dir ${{inputs.model_output}}
+      --output_dir ${{outputs.eval_output}}
+    environment: azureml:AzureML-sklearn-1.0-ubuntu20.04-py38-cpu@latest
+    inputs:
+      processed_data: ${{parent.jobs.data_prep.outputs.processed_data}}
+      model_output: ${{parent.jobs.train_pipeline.outputs.model_output}}
+    outputs:
+      eval_output:
+        type: uri_folder
